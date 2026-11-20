@@ -131,7 +131,7 @@ def test():
         print(errors)
     else:
         print("No lint errors found.")
-    assert rc == 0
+    assert rc == 0, f'Linting failed with return code {rc} and errors: {errors}'
 
 
 if __name__ == '__main__':

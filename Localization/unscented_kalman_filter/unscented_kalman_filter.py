@@ -89,7 +89,6 @@ def observation_model(x):
 
     return z
 
-
 def generate_sigma_points(xEst, PEst, gamma):
     """
     Generate sigma points for UKF.
@@ -99,6 +98,7 @@ def generate_sigma_points(xEst, PEst, gamma):
     
     Parameters
     ----------
+
     xEst : numpy.ndarray
         Current state estimate (n x 1)
     PEst : numpy.ndarray
