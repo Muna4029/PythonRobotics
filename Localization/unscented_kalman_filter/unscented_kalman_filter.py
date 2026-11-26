@@ -8,6 +8,7 @@ author: Atsushi Sakai (@Atsushi_twi)
 
 import sys
 import pathlib
+
 sys.path.append(str(pathlib.Path(__file__).parent.parent.parent))
 
 import math
@@ -19,12 +20,17 @@ import scipy.linalg
 from utils.angle import rot_mat_2d
 
 # Covariance for UKF simulation
-Q = np.diag([
-    0.1,  # variance of location on x-axis
-    0.1,  # variance of location on y-axis
-    np.deg2rad(1.0),  # variance of yaw angle
-    1.0  # variance of velocity
-]) ** 2  # predict state covariance
+Q = (
+    np.diag(
+        [
+            0.1,  # variance of location on x-axis
+            0.1,  # variance of location on y-axis
+            np.deg2rad(1.0),  # variance of yaw angle
+            1.0,  # variance of velocity
+        ]
+    )
+    ** 2
+)  # predict state covariance
 R = np.diag([1.0, 1.0]) ** 2  # Observation x,y position covariance
 
 #  Simulation parameter
@@ -64,15 +70,16 @@ def observation(xTrue, xd, u):
 
 
 def motion_model(x, u):
-    F = np.array([[1.0, 0, 0, 0],
-                  [0, 1.0, 0, 0],
-                  [0, 0, 1.0, 0],
-                  [0, 0, 0, 0]])
+    F = np.array([[1.0, 0, 0, 0], [0, 1.0, 0, 0], [0, 0, 1.0, 0], [0, 0, 0, 0]])
 
-    B = np.array([[DT * math.cos(x[2, 0]), 0],
-                  [DT * math.sin(x[2, 0]), 0],
-                  [0.0, DT],
-                  [1.0, 0.0]])
+    B = np.array(
+        [
+            [DT * math.cos(x[2, 0]), 0],
+            [DT * math.sin(x[2, 0]), 0],
+            [0.0, DT],
+            [1.0, 0.0],
+        ]
+    )
 
     x = F @ x + B @ u
 
@@ -80,10 +87,7 @@ def motion_model(x, u):
 
 
 def observation_model(x):
-    H = np.array([
-        [1, 0, 0, 0],
-        [0, 1, 0, 0]
-    ])
+    H = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
 
     z = H @ x
 
@@ -93,10 +97,10 @@ def observation_model(x):
 def generate_sigma_points(xEst, PEst, gamma):
     """
     Generate sigma points for UKF.
-    
+
     Sigma points are deterministically sampled points used to capture
     the mean and covariance of the state distribution.
-    
+
     Parameters
     ----------
     xEst : numpy.ndarray
@@ -105,7 +109,7 @@ def generate_sigma_points(xEst, PEst, gamma):
         Current state covariance estimate (n x n)
     gamma : float
         Scaling parameter sqrt(n + lambda)
-    
+
     Returns
     -------
     sigma : numpy.ndarray
@@ -119,28 +123,28 @@ def generate_sigma_points(xEst, PEst, gamma):
     n = len(xEst[:, 0])
     # Positive direction
     for i in range(n):
-        sigma = np.hstack((sigma, xEst + gamma * Psqrt[:, i:i + 1]))
+        sigma = np.hstack((sigma, xEst + gamma * Psqrt[:, i : i + 1]))
 
     # Negative direction
     for i in range(n):
-        sigma = np.hstack((sigma, xEst - gamma * Psqrt[:, i:i + 1]))
+        sigma = np.hstack((sigma, xEst - gamma * Psqrt[:, i : i + 1]))
 
     return sigma
 
 
 def predict_sigma_motion(sigma, u):
     """
-        Sigma Points prediction with motion model
+    Sigma Points prediction with motion model
     """
     for i in range(sigma.shape[1]):
-        sigma[:, i:i + 1] = motion_model(sigma[:, i:i + 1], u)
+        sigma[:, i : i + 1] = motion_model(sigma[:, i : i + 1], u)
 
     return sigma
 
 
 def predict_sigma_observation(sigma):
     """
-        Sigma Points prediction with observation model
+    Sigma Points prediction with observation model
     """
     for i in range(sigma.shape[1]):
         sigma[0:2, i] = observation_model(sigma[:, i])
@@ -152,10 +156,10 @@ def predict_sigma_observation(sigma):
 
 def calc_sigma_covariance(x, sigma, wc, Pi):
     nSigma = sigma.shape[1]
-    d = sigma - x[0:sigma.shape[0]]
+    d = sigma - x[0 : sigma.shape[0]]
     P = Pi
     for i in range(nSigma):
-        P = P + wc[0, i] * d[:, i:i + 1] @ d[:, i:i + 1].T
+        P = P + wc[0, i] * d[:, i : i + 1] @ d[:, i : i + 1].T
     return P
 
 
@@ -166,7 +170,7 @@ def calc_pxz(sigma, x, z_sigma, zb, wc):
     P = np.zeros((dx.shape[0], dz.shape[0]))
 
     for i in range(nSigma):
-        P = P + wc[0, i] * dx[:, i:i + 1] @ dz[:, i:i + 1].T
+        P = P + wc[0, i] * dx[:, i : i + 1] @ dz[:, i : i + 1].T
 
     return P
 
@@ -174,9 +178,9 @@ def calc_pxz(sigma, x, z_sigma, zb, wc):
 def ukf_estimation(xEst, PEst, z, u, wm, wc, gamma):
     """
     Unscented Kalman Filter estimation.
-    
+
     Performs one iteration of UKF state estimation using the unscented transform.
-    
+
     Parameters
     ----------
     xEst : numpy.ndarray
@@ -193,7 +197,7 @@ def ukf_estimation(xEst, PEst, z, u, wm, wc, gamma):
         Weights for calculating covariance (1 x 2n+1)
     gamma : float
         Sigma point scaling parameter sqrt(n + lambda)
-    
+
     Returns
     -------
     xEst : numpy.ndarray
@@ -248,15 +252,15 @@ def plot_covariance_ellipse(xEst, PEst):  # pragma: no cover
 def setup_ukf(nx):
     """
     Setup UKF parameters and weights.
-    
+
     Calculates the weights for mean and covariance computation,
     and the scaling parameter gamma for sigma point generation.
-    
+
     Parameters
     ----------
     nx : int
         Dimension of the state vector
-    
+
     Returns
     -------
     wm : numpy.ndarray
@@ -271,10 +275,10 @@ def setup_ukf(nx):
         Sigma point scaling parameter sqrt(n + lambda)
         where lambda = alpha^2 * (n + kappa) - n
     """
-    lamb = ALPHA ** 2 * (nx + KAPPA) - nx
+    lamb = ALPHA**2 * (nx + KAPPA) - nx
     # calculate weights
     wm = [lamb / (lamb + nx)]
-    wc = [(lamb / (lamb + nx)) + (1 - ALPHA ** 2 + BETA)]
+    wc = [(lamb / (lamb + nx)) + (1 - ALPHA**2 + BETA)]
     for i in range(2 * nx):
         wm.append(1.0 / (2 * (nx + lamb)))
         wc.append(1.0 / (2 * (nx + lamb)))
@@ -322,20 +326,25 @@ def main():
         if show_animation:
             plt.cla()
             # for stopping simulation with the esc key.
-            plt.gcf().canvas.mpl_connect('key_release_event',
-                    lambda event: [exit(0) if event.key == 'escape' else None])
+            plt.gcf().canvas.mpl_connect(
+                "key_release_event",
+                lambda event: [exit(0) if event.key == "escape" else None],
+            )
             plt.plot(hz[0, :], hz[1, :], ".g")
-            plt.plot(np.array(hxTrue[0, :]).flatten(),
-                     np.array(hxTrue[1, :]).flatten(), "-b")
-            plt.plot(np.array(hxDR[0, :]).flatten(),
-                     np.array(hxDR[1, :]).flatten(), "-k")
-            plt.plot(np.array(hxEst[0, :]).flatten(),
-                     np.array(hxEst[1, :]).flatten(), "-r")
+            plt.plot(
+                np.array(hxTrue[0, :]).flatten(), np.array(hxTrue[1, :]).flatten(), "-b"
+            )
+            plt.plot(
+                np.array(hxDR[0, :]).flatten(), np.array(hxDR[1, :]).flatten(), "-k"
+            )
+            plt.plot(
+                np.array(hxEst[0, :]).flatten(), np.array(hxEst[1, :]).flatten(), "-r"
+            )
             plot_covariance_ellipse(xEst, PEst)
             plt.axis("equal")
             plt.grid(True)
             plt.pause(0.001)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

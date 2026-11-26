@@ -36,6 +36,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+
 import conftest
 import os
 import subprocess
@@ -43,7 +44,7 @@ import subprocess
 
 CONFIG = os.path.join(
     os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
-    'ruff.toml',
+    "ruff.toml",
 )
 
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -52,11 +53,11 @@ ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 def run_ruff(files, fix):
     if not files:
         return 0, ""
-    args = ['--fix'] if fix else []
+    args = ["--fix"] if fix else []
     res = subprocess.run(
-        ['ruff', 'check', f'--config={CONFIG}'] + args + files,
+        ["ruff", "check", f"--config={CONFIG}"] + args + files,
         stdout=subprocess.PIPE,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     return res.returncode, res.stdout
 
@@ -66,19 +67,12 @@ def rev_list(branch, num_commits):
     Only the first `num_commits` are shown.
     """
     res = subprocess.run(
-        [
-            'git',
-            'rev-list',
-            '--max-count',
-            f'{num_commits}',
-            '--first-parent',
-            branch
-        ],
+        ["git", "rev-list", "--max-count", f"{num_commits}", "--first-parent", branch],
         stdout=subprocess.PIPE,
-        encoding='utf-8',
+        encoding="utf-8",
     )
     res.check_returncode()
-    return res.stdout.rstrip('\n').split('\n')
+    return res.stdout.rstrip("\n").split("\n")
 
 
 def find_branch_point(branch):
@@ -86,7 +80,7 @@ def find_branch_point(branch):
     It is based off of this Stackoverflow post:
     https://stackoverflow.com/questions/1527234/finding-a-branch-point-with-git#4991675
     """
-    branch_commits = rev_list('HEAD', 1000)
+    branch_commits = rev_list("HEAD", 1000)
     main_commits = set(rev_list(branch, 1000))
     for branch_commit in branch_commits:
         if branch_commit in main_commits:
@@ -94,17 +88,16 @@ def find_branch_point(branch):
 
     # If a branch split off over 1000 commits ago we will fail to find
     # the ancestor.
-    raise RuntimeError(
-        'Failed to find a common ancestor in the last 1000 commits')
+    raise RuntimeError("Failed to find a common ancestor in the last 1000 commits")
 
 
 def find_diff(sha):
     """Find the diff since the given sha."""
-    files = ['*.py']
+    files = ["*.py"]
     res = subprocess.run(
-        ['git', 'diff', '--unified=0', sha, '--'] + files,
+        ["git", "diff", "--unified=0", sha, "--"] + files,
         stdout=subprocess.PIPE,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     res.check_returncode()
     return res.stdout
@@ -113,13 +106,24 @@ def find_diff(sha):
 def diff_files(sha):
     """Find the diff since the given SHA."""
     res = subprocess.run(
-        ['git', 'diff', '--name-only', '--diff-filter=ACMR', '-z', sha, '--',
-         '*.py', '*.pyx', '*.pxd', '*.pxi'],
+        [
+            "git",
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            "-z",
+            sha,
+            "--",
+            "*.py",
+            "*.pyx",
+            "*.pxd",
+            "*.pxi",
+        ],
         stdout=subprocess.PIPE,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     res.check_returncode()
-    return [os.path.join(ROOT_DIR, f) for f in res.stdout.split('\0') if f]
+    return [os.path.join(ROOT_DIR, f) for f in res.stdout.split("\0") if f]
 
 
 def test():
@@ -134,5 +138,5 @@ def test():
     assert rc == 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     conftest.run_this_test(__file__)
